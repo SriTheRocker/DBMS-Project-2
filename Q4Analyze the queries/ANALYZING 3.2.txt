@@ -1,0 +1,22 @@
+ANALYZING QUERY 3.2:
+
+This query uses a Merge Join to join the planet_osm_point table with itself based on proximity. It then applies a distance filter and a condition on the railway column 
+to filter out subway entrances that are not close to parks. Finally, it groups the results by park name and counts the number of subway entrances for each park.
+
+QUERY PLAN 3.2:
+
+"GroupAggregate  (cost=11733.20..57264736.51 rows=401 width=28)"
+"  Group Key: p.name"
+"  ->  Nested Loop  (cost=11733.20..57263460.80 rows=254340 width=20)"
+"        Join Filter: (st_distance(geography(st_transform(p.way, 4326)), geography(st_transform(s.way, 4326)), false) < '500'::double precision)"
+"        ->  Gather Merge  (cost=10733.20..10780.37 rows=405 width=52)"
+"              Workers Planned: 2"
+"              ->  Sort  (cost=9733.18..9733.60 rows=169 width=52)"
+"                    Sort Key: p.name"
+
+The query plan shows that the most expensive operation is the Sort operation, which accounts for most of the estimated cost of the query. 
+This is because the query needs to sort the results by subway entrance location before joining with the parks. However, the cost is still reasonable given the size of the dataset.
+
+Overall, this query should perform well as long as the appropriate spatial indexes are in place on the way column and the distance threshold is appropriate.
+
+Overall, the query seems to be well-written and optimized, but there is still room for improvement to optimize the join operation and sorting operation

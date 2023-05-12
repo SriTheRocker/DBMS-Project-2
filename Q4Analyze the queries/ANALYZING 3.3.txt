@@ -1,0 +1,34 @@
+ANALYZING QUERY 3.3:
+
+The query is a join between the planet_osm_roads and planet_osm_polygon tables, with the condition that the road is a primary highway and the polygon is a park.
+
+The join is performed using the ST_Intersects function, which checks whether the spatial objects of the two tables intersect with each other.
+
+The query planner has chosen a nested loop join strategy, where it first scans the planet_osm_roads table using an index on the highway column, 
+and then for each row it performs a bitmap heap scan on the planet_osm_polygon table using an index on the way column.
+
+The Bitmap Heap Scan operation includes a filter on the leisure column, which checks if the polygon is a park. This filter is applied after the 
+index scan on the way column, which could be inefficient if there are a lot of polygons that don't match the leisure = 'park' condition.
+
+
+QUERY PLAN:
+
+"Gather  (cost=1000.28..268194.15 rows=7676 width=38)"
+"  Workers Planned: 2"
+"  ->  Nested Loop  (cost=0.28..266426.55 rows=3198 width=38)"
+"        ->  Parallel Seq Scan on planet_osm_polygon p  (cost=0.00..56285.91 rows=1374 width=190)"
+"              Filter: (leisure = 'park'::text)"
+"        ->  Index Scan using planet_osm_roads_way_idx on planet_osm_roads r  (cost=0.28..152.93 rows=1 width=165)"
+"              Index Cond: (way && p.way)"
+"              Filter: ((highway = 'primary'::text) AND st_intersects(way, p.way))".
+
+The EXPLAIN output shows that the query uses a nested loop join between the planet_osm_roads and planet_osm_polygon tables. The planet_osm_polygon table is scanned 
+using a parallel sequential scan and a filter is applied to select only those records where leisure = 'park'. The planet_osm_roads table is scanned using an index 
+scan on the way column with the condition way && p.way and a filter is applied to select only those records where highway = 'primary' and way intersects p.way.
+
+The cost of the query is estimated to be 1000.28 and the planner expects to use 2 workers to parallelize the operation. The estimated number of rows is 3198 and 
+the estimated width of the result is 38.
+
+Overall, the query seems to be optimized, as it utilizes an index scan to filter out unwanted rows and perform the intersection operation between the two tables. 
+The parallel sequential scan on the planet_osm_polygon table could potentially benefit from indexing on the leisure column, but this would depend on the data 
+distribution and cardinality of the column.

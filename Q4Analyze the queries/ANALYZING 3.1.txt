@@ -1,0 +1,31 @@
+ANALYZING QUERY 3.1 :
+
+The query uses a subquery to transform the coordinates of restaurant points and administrative polygons to the same spatial reference system (3857), 
+and then joins them using the ST_Contains function to count the number of restaurants within each administrative area. The GROUP BY and ORDER BY clauses are 
+used to aggregate the results and sort them by the restaurant count in descending order.
+
+The EXPLAIN statement shows the execution plan of the query, which can be used to optimize it. The plan shows that the query uses nested loop joins 
+and hash aggregates to compute the results. The plan also shows that there are two sequential scans of the planet_osm_point and planet_osm_polygon tables, 
+which can be expensive if the tables are large.
+
+To optimize the query, we can create indexes on the amenity column of the planet_osm_point table and the boundary and admin_level columns of the planet_osm_polygon table, 
+which are used in the WHERE clauses of the subqueries. We can also create a spatial index on the way column of the planet_osm_polygon table to improve the performance of the 
+ST_Contains function.
+
+QUERY PLAN 3.1:
+
+"Sort  (cost=618934.34..618934.35 rows=1 width=29)"
+"  Sort Key: (count(*)) DESC"
+"  ->  GroupAggregate  (cost=60002.93..618934.33 rows=1 width=29)"
+"        Group Key: planet_osm_polygon.name"
+"        ->  Nested Loop  (cost=60002.93..618934.29 rows=7 width=21)"
+"              Join Filter: st_contains(st_transform(planet_osm_polygon.way, 3857), st_transform(planet_osm_point.way, 3857))"
+"              ->  Gather Merge  (cost=59002.93..59003.05 rows=1 width=190)"
+"                    Workers Planned: 2"
+
+From the execution plan, we can see that the query uses nested loops for joining the restaurant points and administrative areas tables, 
+which is not the most efficient way to perform this operation.The cost of the sorting operation is also high, which could be optimized. 
+The query uses a GroupAggregate operator to group the results by area name and count the number of restaurants in each area.
+
+To improve the performance of the query, we could consider using a spatial index on the way column of the planet_osm_point table and the planet_osm_polygon table. 
+Additionally, we could consider using a different join method, such as a spatial join using the ST_Intersects or ST_Contains functions, which can be more efficient for spatial queries.
